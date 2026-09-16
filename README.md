@@ -1,117 +1,47 @@
-# FinTrack — Mobile Expense Tracker (GitHub Pages + Firebase)
+# FinTrack V2 — PWA + Firebase + GitHub Pages
 
-เว็บแอปบันทึกรายรับรายจ่ายสำหรับมือถือ สร้างด้วย HTML/CSS/JavaScript แบบไม่ต้องใช้ build tool และใช้ Firebase Authentication + Cloud Firestore เป็นแกนหลัก
+รุ่นนี้ต่อยอดจาก V1 โดยเพิ่ม Google Sign-In, หลายบัญชีเงิน, โอนเงิน, แนบรูปสลิปใน Firebase Storage, CSV import/export, ปฏิทิน, recurring, budgets/goals, backup JSON, theme, PIN lock และโครง FCM.
 
-## ฟีเจอร์ในชุดนี้
+## 1) Firebase
+1. Create project และ Register Web App
+2. Authentication → Sign-in providers → เปิด Email/Password และ Google
+3. Firestore Database → Create database
+4. Storage → เปิด Cloud Storage
+5. วาง `firestore.rules` และ `storage.rules`
+6. คัดลอก Firebase web config ไปที่ `app.js` และ `firebase-messaging-sw.js`
+7. Cloud Messaging → Web configuration → สร้าง Web Push certificate แล้วนำ public VAPID key ใส่ `YOUR_PUBLIC_VAPID_KEY` ใน `app.js`
 
-- Quick Add รายรับ/รายจ่าย
-- หมวดหมู่หลัก/หมวดย่อย + ไอคอน + สี
-- Custom Tags
-- OCR สลิปแบบ client-side ด้วย Tesseract.js (ควรตรวจสอบข้อมูลก่อนบันทึก)
-- Recurring Transactions แบบสร้างรายการเมื่อเปิดแอปในวันที่กำหนด
-- Budget รายหมวด + เปอร์เซ็นต์เตือนใน UI
-- Savings Goals + progress
-- Dashboard, Pie Chart, Income vs Expense, Trend รายเดือน
-- Export CSV / Excel / PDF
-- Firebase Email/Password Auth
-- Cloud Firestore และ Offline-first cache
-- PIN Lock ฝั่ง browser
-- PWA manifest + service worker scaffold
-- Dark Mode ตาม system preference
+## 2) GitHub Pages
+สร้าง repo เช่น `fintrack` แล้วอัปโหลดทุกไฟล์จากโฟลเดอร์นี้ไว้ที่ root
+Settings → Pages → Deploy from a branch → main → root
 
-## 1. สร้าง Firebase Project
+## 3) Authorized domains
+Firebase Console → Authentication → Settings → Authorized domains
+เพิ่มโดเมน GitHub Pages เช่น `YOURNAME.github.io`
 
-1. เข้า Firebase Console
-2. สร้าง Project ใหม่
-3. Add web app เพื่อรับ Firebase Config
-4. เปิด Authentication > Sign-in method > Email/Password
-5. สร้าง Cloud Firestore Database
-6. ไปที่ Firestore Rules และวาง `firestore.rules`
+## 4) Google Sign-In
+เปิด Google provider และตรวจสอบ Authorized domains. Firebase รองรับ `signInWithPopup`/redirect สำหรับ Google Sign-In.
 
-## 2. ใส่ Firebase Config
+## 5) Offline-first
+Firestore Web ใช้ persistent local cache และจะซิงก์ local writes เมื่อกลับออนไลน์. ผู้ใช้ควรใช้บนอุปกรณ์ที่เชื่อถือได้ เพราะ cache คงอยู่ระหว่าง session.
 
-เปิด `app.js` และแทนค่า:
+## 6) Cloud Storage
+รูปสลิปจะถูกเก็บที่ `users/{uid}/receipts/...` และ Storage Rules จำกัดสิทธิ์ให้เจ้าของ UID เท่านั้น
 
-```js
-const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.firebasestorage.app',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID'
-};
-```
+## 7) สิ่งที่เป็น client-side
+- OCR เป็น Tesseract.js ใน browser
+- PIN lock เป็น localStorage/browser lock ไม่ใช่ database encryption
+- recurring ในชุดนี้สร้างรายการเมื่อเปิดแอปตรงวันที่กำหนด
+- FCM ต้องมี server-side sender (เช่น Cloud Functions/Cloud Run/ระบบ backend) สำหรับ scheduled push ที่เชื่อถือได้
 
-แล้วนำ config เดียวกันไปใส่ใน `firebase-messaging-sw.js`
+## 8) หมายเหตุเรื่องฟรี
+GitHub Pages เป็น static hosting ฟรี แต่การใช้ Firebase บางบริการมี quota/เงื่อนไขตามแพ็กเกจของ Firebase และการเปิดใช้บริการ backend บางชนิดอาจเปลี่ยนต้นทุนได้ ควรตรวจสอบหน้า Billing ของโปรเจกต์ก่อนใช้งานจริง
 
-> Firebase Web config ไม่ใช่ secret key แบบ server credential แต่ Firestore Rules ต้องตั้งถูกต้อง เพราะ config จะอยู่ใน browser
-
-## 3. เปิดใช้งาน Cloud Firestore
-
-โครงสร้างข้อมูลที่แอปใช้:
-
-```text
-users/{uid}/transactions/{id}
-users/{uid}/categories/{id}
-users/{uid}/tags/{id}
-users/{uid}/budgets/{id}
-users/{uid}/goals/{id}
-users/{uid}/recurring/{id}
-users/{uid}/settings/main
-users/{uid}/devices/{id}
-```
-
-Rules จำกัดให้ผู้ใช้เข้าถึงข้อมูลของ UID ตัวเองเท่านั้น
-
-## 4. Deploy ด้วย GitHub Pages
-
-สร้าง repository เช่น `fintrack`
-
-อัปโหลดไฟล์ทั้งหมดในโฟลเดอร์นี้ไปไว้ที่ root ของ repository แล้วไปที่:
-
-`Settings > Pages > Deploy from a branch > main > /(root)`
-
-GitHub Pages รองรับการโฮสต์ static HTML/CSS/JS โดยตรง และหน้าเว็บจะให้บริการผ่าน HTTPS ซึ่งจำเป็นต่อ Push Notifications บนเว็บ
-
-## 5. ทดสอบ
-
-เปิด URL GitHub Pages แล้ว:
-
-1. สมัครสมาชิก
-2. เพิ่มรายรับ/รายจ่าย
-3. เปิด DevTools > Network/Console เพื่อตรวจ error ถ้ามี
-4. ทดสอบปิดเน็ต แล้วสร้างรายการ จากนั้นเปิดเน็ตอีกครั้งเพื่อดูการ sync
-
-## 6. OCR สลิป
-
-รุ่นนี้ใช้ Tesseract.js ฝั่ง browser จึงไม่ต้องส่งรูปสลิปขึ้น server ภายนอกโดยตัวแอปเอง แต่ความแม่นยำของ OCR กับสลิปธนาคารต่างรูปแบบกันได้ จึงตั้งใจให้เป็น "ช่วยอ่าน" ไม่ใช่การบันทึกอัตโนมัติ 100%
-
-## 7. Notifications / FCM
-
-โค้ดมีโครง FCM ไว้แล้ว แต่ต้องตั้งค่า Web Push Certificate (VAPID key) ใน Firebase Cloud Messaging ก่อน จากนั้นใส่ public VAPID key ใน `app.js` ตรง `YOUR_PUBLIC_VAPID_KEY`
-
-การแจ้งเตือนแบบ remote/persistent ต้องมีการส่ง message จาก FCM; การเตือนตามเวลาแบบ server-side ยังต้องเพิ่ม backend/scheduler เช่น Cloud Functions หรือระบบ cron
-
-## 8. PIN Lock
-
-PIN ในชุดนี้เป็น app lock ฝั่ง browser เพื่อกันการเปิดแอปบนเครื่องที่ใช้งานอยู่ ไม่ใช่การเข้ารหัสข้อมูลระดับฐานข้อมูล การป้องกันข้อมูลจริงยังขึ้นกับ Firebase Authentication + Firestore Security Rules
-
-## 9. ข้อจำกัดของ GitHub Pages
-
-GitHub Pages เป็น static hosting ดังนั้น:
-
-- ไม่เหมาะกับการเก็บ Firebase Admin credentials
-- ไม่สามารถรัน scheduled backend เองได้
-- การแจ้งเตือนที่ต้องส่งตามเวลาอย่างน่าเชื่อถือควรใช้ Firebase Cloud Functions / Cloud Scheduler หรือบริการ backend แยก
-
-## 10. การพัฒนาต่อที่แนะนำ
-
-- เพิ่ม recurring แบบ atomic transaction เพื่อลดโอกาสสร้างรายการซ้ำเมื่อเปิดหลายอุปกรณ์พร้อมกัน
-- เพิ่ม Firestore composite indexes ตาม query ที่เพิ่มในอนาคต
-- เพิ่ม Storage สำหรับเก็บรูปสลิปแบบ opt-in
-- เพิ่ม Google Sign-In
-- เพิ่ม CSV import
-- เพิ่ม recurring calendar
-- เพิ่ม encryption สำหรับข้อมูลที่ต้องการปกป้องเพิ่มเติม
-- เพิ่ม Web Push token management และ Cloud Functions สำหรับ scheduled notifications
+## 9) ไฟล์หลัก
+- `index.html` UI
+- `styles.css` responsive/mobile UI
+- `app.js` logic + Firebase client SDK
+- `sw.js` PWA offline shell
+- `firebase-messaging-sw.js` FCM background handler
+- `firestore.rules` security rules
+- `storage.rules` receipt storage rules

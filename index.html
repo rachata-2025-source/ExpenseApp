@@ -1,165 +1,51 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f766e" />
-  <meta name="description" content="FinTrack - รายรับรายจ่ายแบบ Offline-first ด้วย Firebase" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>฿</text></svg>">
-  <title>FinTrack</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827"><meta name="description" content="FinTrack V2 — บันทึกรายรับรายจ่ายแบบ PWA">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="styles.css">
+<title>FinTrack V2</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <div id="loading" class="loading"><div class="spinner"></div><div id="loadingText">กำลังโหลด…</div></div>
-
-  <section id="authView" class="auth-shell hidden">
-    <div class="auth-card">
-      <div class="brand-mark">฿</div>
-      <h1>FinTrack</h1>
-      <p class="muted">บันทึกรายรับรายจ่ายง่าย ๆ ทุกอุปกรณ์</p>
-      <div class="auth-tabs">
-        <button class="tab active" data-auth-tab="login">เข้าสู่ระบบ</button>
-        <button class="tab" data-auth-tab="register">สมัครสมาชิก</button>
-      </div>
-      <form id="authForm">
-        <label>อีเมล<input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"></label>
-        <label>รหัสผ่าน<input id="authPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="อย่างน้อย 6 ตัวอักษร"></label>
-        <button class="primary wide" id="authSubmit" type="submit">เข้าสู่ระบบ</button>
-        <button class="ghost wide" id="resetPasswordBtn" type="button">ลืมรหัสผ่าน</button>
-      </form>
-      <div id="authError" class="alert hidden"></div>
-    </div>
-  </section>
-
-  <section id="appView" class="app-shell hidden">
-    <header class="topbar safe-top">
-      <div><div class="eyebrow">FINTRACK</div><div id="greeting" class="top-title">ภาพรวมการเงิน</div></div>
-      <div class="top-actions">
-        <span id="syncStatus" class="sync-badge">● Online</span>
-        <button class="icon-btn" id="lockNowBtn" aria-label="ล็อกแอป">🔒</button>
-      </div>
-    </header>
-
-    <main id="mainContent" class="content safe-bottom">
-      <section id="homePage" class="page active">
-        <div class="balance-card">
-          <div class="muted light">ยอดคงเหลือ</div>
-          <div id="balanceValue" class="balance-value">฿0.00</div>
-          <div class="balance-row"><span>รายรับ <b id="incomeValue">฿0.00</b></span><span>รายจ่าย <b id="expenseValue">฿0.00</b></span></div>
-        </div>
-        <div class="quick-grid">
-          <button class="quick income" data-quick-type="income">＋ รายรับ</button>
-          <button class="quick expense" data-quick-type="expense">− รายจ่าย</button>
-          <button class="quick scan" id="scanSlipBtn">▣ สแกนสลิป</button>
-          <button class="quick" id="openRecurringQuick">↻ รายการประจำ</button>
-        </div>
-        <div class="section-head"><h2>รายการล่าสุด</h2><button class="text-btn" data-nav="transactions">ดูทั้งหมด</button></div>
-        <div id="recentList" class="tx-list"></div>
-      </section>
-
-      <section id="transactionsPage" class="page">
-        <div class="page-title"><h1>รายการ</h1><button class="primary small" id="addTxTopBtn">＋ เพิ่ม</button></div>
-        <div class="filters">
-          <input id="txSearch" placeholder="ค้นหา ชื่อร้าน หมวดหมู่ แท็ก…">
-          <select id="txTypeFilter"><option value="all">ทั้งหมด</option><option value="income">รายรับ</option><option value="expense">รายจ่าย</option></select>
-          <select id="txMonthFilter"></select>
-        </div>
-        <div id="allTxList" class="tx-list"></div>
-      </section>
-
-      <section id="reportsPage" class="page">
-        <div class="page-title"><h1>รายงาน</h1><select id="reportPeriod"><option value="month">เดือนนี้</option><option value="year">ปีนี้</option><option value="all">ทั้งหมด</option></select></div>
-        <div class="stats-grid">
-          <div class="stat-card"><span>รายรับ</span><b id="reportIncome">฿0.00</b></div>
-          <div class="stat-card"><span>รายจ่าย</span><b id="reportExpense">฿0.00</b></div>
-          <div class="stat-card"><span>ออมสุทธิ</span><b id="reportNet">฿0.00</b></div>
-        </div>
-        <div class="panel chart-panel"><h3>รายรับ VS รายจ่าย</h3><canvas id="incomeExpenseChart"></canvas></div>
-        <div class="panel chart-panel"><h3>สัดส่วนรายจ่ายตามหมวดหมู่</h3><canvas id="categoryChart"></canvas></div>
-        <div class="panel"><h3>แนวโน้มรายเดือน</h3><div id="trendTable" class="mini-table"></div></div>
-        <div class="export-grid">
-          <button class="ghost" id="exportCsvBtn">CSV</button>
-          <button class="ghost" id="exportExcelBtn">Excel</button>
-          <button class="ghost" id="exportPdfBtn">PDF</button>
-        </div>
-      </section>
-
-      <section id="budgetPage" class="page">
-        <div class="page-title"><h1>งบประมาณ & เป้าหมาย</h1></div>
-        <div class="panel"><div class="section-head"><h3>งบรายหมวดหมู่</h3><button class="primary small" id="addBudgetBtn">＋ เพิ่มงบ</button></div><div id="budgetList"></div></div>
-        <div class="panel"><div class="section-head"><h3>กระปุกออมเงิน</h3><button class="primary small" id="addGoalBtn">＋ เพิ่มเป้าหมาย</button></div><div id="goalList"></div></div>
-      </section>
-
-      <section id="settingsPage" class="page">
-        <div class="page-title"><h1>ตั้งค่า</h1></div>
-        <div class="panel settings-group">
-          <h3>บัญชี</h3>
-          <div class="settings-row"><span id="userEmailLabel">-</span><button class="ghost" id="logoutBtn">ออกจากระบบ</button></div>
-        </div>
-        <div class="panel settings-group">
-          <h3>ความปลอดภัย</h3>
-          <div class="settings-row"><span>PIN Lock</span><label class="switch"><input type="checkbox" id="pinEnabled"><span></span></label></div>
-          <div class="settings-row" id="pinSetupRow"><span>ตั้ง/เปลี่ยน PIN</span><button class="ghost" id="setPinBtn">ตั้ง PIN</button></div>
-        </div>
-        <div class="panel settings-group">
-          <h3>การแจ้งเตือน</h3>
-          <div class="settings-row"><span>อนุญาต Notifications</span><button class="ghost" id="enableNotificationsBtn">เปิดแจ้งเตือน</button></div>
-          <div class="settings-row"><span>เตือนบันทึกทุกวัน</span><input id="dailyReminderTime" type="time" value="20:00"></div>
-        </div>
-        <div class="panel settings-group">
-          <h3>หมวดหมู่</h3>
-          <div class="section-head"><span class="muted">กำหนดหมวดหลัก/ย่อยและสีได้</span><button class="primary small" id="addCategoryBtn">＋ เพิ่ม</button></div>
-          <div id="categoryList"></div>
-        </div>
-        <div class="panel settings-group">
-          <h3>แท็ก</h3>
-          <div class="section-head"><span class="muted">เช่น #ทริปญี่ปุ่น</span><button class="primary small" id="addTagBtn">＋ เพิ่ม</button></div>
-          <div id="tagList" class="chip-wrap"></div>
-        </div>
-        <div class="panel settings-group"><h3>ข้อมูล</h3><button class="danger ghost wide" id="clearLocalBtn">ล้าง Cache Offline ของเครื่องนี้</button></div>
-      </section>
-    </main>
-
-    <nav class="bottom-nav safe-bottom">
-      <button data-nav="home" class="nav-item active"><span>⌂</span><small>หน้าแรก</small></button>
-      <button data-nav="transactions" class="nav-item"><span>☷</span><small>รายการ</small></button>
-      <button id="fabNav" class="fab" aria-label="เพิ่มรายการ">＋</button>
-      <button data-nav="reports" class="nav-item"><span>◔</span><small>รายงาน</small></button>
-      <button data-nav="settings" class="nav-item"><span>⚙</span><small>ตั้งค่า</small></button>
-    </nav>
-  </section>
-
-  <div id="lockView" class="lock-screen hidden">
-    <div class="lock-card"><div class="brand-mark">🔒</div><h2>แอปถูกล็อก</h2><p class="muted">ใส่ PIN เพื่อเข้าใช้งาน</p><div id="pinDots" class="pin-dots">••••</div><input id="pinInput" class="pin-input" inputmode="numeric" maxlength="6" type="password" autocomplete="off" placeholder="PIN"><button class="primary wide" id="unlockBtn">ปลดล็อก</button><button class="ghost wide" id="useAccountUnlockBtn">ออกจากบัญชี</button></div>
+<div id="toast" class="toast"></div>
+<div id="authView" class="center-page"><div class="auth-card">
+  <div class="brand"><div class="brand-mark">฿</div><div><h1>FinTrack</h1><p>V2 · Smart Money Tracker</p></div></div>
+  <div id="authForm">
+    <input id="email" type="email" placeholder="อีเมล"><input id="password" type="password" placeholder="รหัสผ่าน">
+    <div class="row"><button id="btnLogin" class="primary grow">เข้าสู่ระบบ</button><button id="btnRegister" class="secondary grow">สมัคร</button></div>
+    <button id="btnGoogle" class="google grow">เข้าสู่ระบบด้วย Google</button>
   </div>
+  <p class="muted small">ข้อมูลการเงินแยกตามบัญชีผู้ใช้ด้วย Firebase Authentication + Firestore Security Rules</p>
+</div></div>
 
-  <div id="modalBackdrop" class="modal-backdrop hidden"></div>
-  <dialog id="txModal" class="modal"><form method="dialog" id="txForm">
-    <div class="modal-head"><h2 id="txModalTitle">เพิ่มรายการ</h2><button class="icon-btn" value="cancel">✕</button></div>
-    <div class="type-toggle"><button type="button" data-type="expense" class="active">รายจ่าย</button><button type="button" data-type="income">รายรับ</button></div>
-    <label>จำนวนเงิน<input id="txAmount" type="number" min="0" step="0.01" inputmode="decimal" required placeholder="0.00"></label>
-    <div class="form-grid"><label>วันที่<input id="txDate" type="date" required></label><label>เวลา<input id="txTime" type="time" required></label></div>
-    <label>หมวดหมู่<select id="txCategory" required></select></label>
-    <label>ชื่อรายการ / ร้านค้า<input id="txTitle" required placeholder="เช่น กาแฟ Amazon"></label>
-    <label>แท็ก<input id="txTags" placeholder="#ทริปญี่ปุ่น, #งานแต่ง"></label>
-    <label>บันทึกเพิ่มเติม<textarea id="txNote" rows="3" placeholder="หมายเหตุ"></textarea></label>
-    <input id="txId" type="hidden"><input id="txReceiptText" type="hidden">
-    <button class="primary wide" type="submit">บันทึกรายการ</button>
-    <button class="danger ghost wide hidden" id="deleteTxBtn" type="button">ลบรายการ</button>
-  </form></dialog>
+<div id="appView" class="app hidden">
+<header class="topbar"><div class="brand-inline"><div class="brand-mark sm">฿</div><b>FinTrack</b><span id="syncState" class="status-dot offline">ออฟไลน์</span></div><div class="top-actions"><button id="btnTheme" class="icon-btn" title="Theme">◐</button><button id="btnLock" class="icon-btn">🔒</button><button id="btnProfile" class="avatar">U</button></div></header>
+<main id="mainContent">
+<section id="page-home" class="page active"><div class="hero"><div><span id="helloName" class="muted">สวัสดี</span><h2 id="balance">฿0.00</h2><span class="muted">ยอดคงเหลือรวม</span></div><button id="quickAdd" class="fab">＋</button></div>
+<div class="stat-grid"><div class="stat"><span>รายรับเดือนนี้</span><b id="monthIncome">฿0</b></div><div class="stat"><span>รายจ่ายเดือนนี้</span><b id="monthExpense">฿0</b></div><div class="stat"><span>อัตราออม</span><b id="saveRate">0%</b></div></div>
+<div class="section-title"><h3>บัญชีเงิน</h3><button id="addAccount" class="text-btn">+ เพิ่ม</button></div><div id="accounts" class="account-list"></div>
+<div class="section-title"><h3>รายการล่าสุด</h3><button data-page="transactions" class="text-btn nav-btn">ดูทั้งหมด</button></div><div id="recentTransactions" class="list"></div></section>
 
-  <dialog id="scanModal" class="modal"><div class="modal-head"><h2>สแกนสลิป</h2><button class="icon-btn" id="closeScanBtn">✕</button></div><p class="muted">ระบบ OCR ช่วยอ่านข้อความจากภาพ แต่ควรตรวจสอบยอด/วันที่/ชื่อผู้รับก่อนบันทึก</p><input id="receiptFile" type="file" accept="image/*" capture="environment"><div id="ocrPreview" class="ocr-preview"></div><div id="ocrStatus" class="muted"></div><button class="primary wide" id="runOcrBtn" disabled>เริ่มอ่านข้อความ</button><button class="ghost wide hidden" id="useOcrBtn">นำข้อมูลไปเพิ่มรายการ</button></dialog>
+<section id="page-transactions" class="page"><div class="section-head"><h2>รายการ</h2><div><button id="importCsv" class="secondary">นำเข้า CSV</button><button id="exportCsv" class="secondary">ส่งออก CSV</button></div></div><div class="filters"><input id="searchTx" placeholder="ค้นหา..."/><select id="filterType"><option value="all">ทั้งหมด</option><option value="income">รายรับ</option><option value="expense">รายจ่าย</option><option value="transfer">โอนเงิน</option></select><input id="filterMonth" type="month"></div><div id="transactionsList" class="list"></div></section>
 
-  <dialog id="simpleModal" class="modal"><form method="dialog" id="simpleForm"><div class="modal-head"><h2 id="simpleTitle">เพิ่มข้อมูล</h2><button class="icon-btn" value="cancel">✕</button></div><div id="simpleFields"></div><button class="primary wide" value="default">บันทึก</button></form></dialog>
+<section id="page-calendar" class="page"><div class="section-head"><h2>ปฏิทิน</h2></div><div class="calendar"><div class="cal-head"><button id="prevMonth">‹</button><b id="calTitle"></b><button id="nextMonth">›</button></div><div class="weekdays"><span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span></div><div id="calendarGrid" class="calendar-grid"></div></div><div id="daySummary" class="card hidden"></div></section>
 
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+<section id="page-reports" class="page"><div class="section-head"><h2>วิเคราะห์</h2><select id="reportPeriod"><option value="6">6 เดือน</option><option value="12" selected>12 เดือน</option><option value="24">24 เดือน</option></select></div><div class="chart-card"><h3>รายรับ vs รายจ่าย</h3><canvas id="incomeExpenseChart" height="220"></canvas></div><div class="chart-card"><h3>สัดส่วนรายจ่ายเดือนนี้</h3><canvas id="categoryChart" height="220"></canvas></div><div class="section-title"><h3>หมวดที่ใช้สูงสุด</h3></div><div id="topCategories" class="list"></div></section>
+
+<section id="page-budgets" class="page"><div class="section-head"><h2>งบประมาณ & เป้าหมาย</h2></div><div class="section-title"><h3>งบประมาณ</h3><button id="addBudget" class="text-btn">+ เพิ่ม</button></div><div id="budgets" class="list"></div><div class="section-title"><h3>เป้าหมายการออม</h3><button id="addGoal" class="text-btn">+ เพิ่ม</button></div><div id="goals" class="list"></div></section>
+
+<section id="page-settings" class="page"><div class="section-head"><h2>ตั้งค่า</h2></div><div class="settings-group"><button id="manageCategories" class="setting-row">📂 หมวดหมู่ <span>›</span></button><button id="manageTags" class="setting-row">🏷️ แท็ก <span>›</span></button><button id="manageRecurring" class="setting-row">🔁 รายการประจำ <span>›</span></button><button id="manageAccounts" class="setting-row">💳 บัญชีเงิน <span>›</span></button><button id="manageNotifications" class="setting-row">🔔 การแจ้งเตือน <span>›</span></button><button id="backupData" class="setting-row">💾 สำรองข้อมูล <span>›</span></button><label class="setting-row">🌙 Dark Mode <input id="darkToggle" type="checkbox"></label><label class="setting-row">🔐 App Lock PIN <input id="pinToggle" type="checkbox"></label></div><div class="card"><b>บัญชีผู้ใช้</b><p id="userInfo" class="muted small"></p><button id="btnLogout" class="danger">ออกจากระบบ</button></div></section>
+</main>
+<nav class="bottom-nav"><button data-page="home" class="nav-btn active">⌂<span>หน้าหลัก</span></button><button data-page="transactions" class="nav-btn">☷<span>รายการ</span></button><button data-page="calendar" class="nav-btn">▣<span>ปฏิทิน</span></button><button data-page="reports" class="nav-btn">◔<span>วิเคราะห์</span></button><button data-page="budgets" class="nav-btn">🎯<span>งบ/เป้าหมาย</span></button><button data-page="settings" class="nav-btn">⚙<span>ตั้งค่า</span></button></nav>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-sheet"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose">×</button></div><div id="modalBody"></div></div></div>
+<div id="lockScreen" class="center-page hidden"><div class="lock-card"><div class="brand-mark">🔒</div><h2>FinTrack ถูกล็อก</h2><p class="muted">กรอก PIN เพื่อปลดล็อก</p><input id="unlockPin" type="password" inputmode="numeric" maxlength="6" class="pin-input"><button id="unlockBtn" class="primary">ปลดล็อก</button></div></div>
+
+<script src="app.js"></script>
+</body></html>
